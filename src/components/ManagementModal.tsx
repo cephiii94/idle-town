@@ -13,6 +13,7 @@ interface ManagementModalProps {
 
 export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeStat, onForceOrder }: ManagementModalProps) {
   const [activeTab, setActiveTab] = useState<'karakter' | 'town'>('karakter');
+  const [selectedVillagerId, setSelectedVillagerId] = useState<number | null>(null);
 
   if (!isOpen) return null;
 
@@ -25,12 +26,12 @@ export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeS
             <h2 className="text-xl font-bold text-slate-100 uppercase tracking-tighter">Manajemen Desa</h2>
             <div className="flex gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
               <button 
-                onClick={() => setActiveTab('karakter')}
+                onClick={() => { setActiveTab('karakter'); setSelectedVillagerId(null); }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   activeTab === 'karakter' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
-                Karakter
+                Penduduk
               </button>
               <button 
                 onClick={() => setActiveTab('town')}
@@ -53,68 +54,131 @@ export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeS
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
           {activeTab === 'karakter' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {villagers.length === 0 && (
-                <div className="col-span-2 py-10 text-center text-slate-500 italic">
+            <div className="flex flex-col gap-6">
+              {villagers.length === 0 ? (
+                <div className="py-10 text-center text-slate-500 italic">
                   Sedang mengambil data penduduk...
                 </div>
-              )}
-              {villagers.map((v) => (
-                <div key={v.id} className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">{v.emoji}</span>
+              ) : !selectedVillagerId ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {villagers.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVillagerId(v.id)}
+                      className="group relative bg-slate-800/40 hover:bg-blue-600/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/50 transition-all flex flex-col items-center gap-3 active:scale-95 text-center"
+                    >
+                      <span className="text-5xl group-hover:scale-110 transition-transform duration-300">{v.emoji}</span>
                       <div>
-                        <h3 className="font-bold text-slate-100 text-sm">{v.name}</h3>
-                        <p className="text-[10px] text-blue-400 font-mono">LVL {v.level} • EXP {v.exp}/{v.maxExp}</p>
+                        <h3 className="font-bold text-slate-100 group-hover:text-blue-400 text-base">{v.name}</h3>
+                        <p className="text-[10px] text-slate-500 font-mono">LVL {v.level}</p>
+                      </div>
+                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-blue-400 text-xs">➔</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {/* Detail Header with Back Button */}
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => setSelectedVillagerId(null)}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all text-xs font-bold"
+                    >
+                      ← Kembali ke List
+                    </button>
+                    <div className="h-px flex-1 bg-slate-800"></div>
+                  </div>
+
+                  {/* Character Detail Card */}
+                  {villagers.filter(v => v.id === selectedVillagerId).map((v) => (
+                    <div key={v.id} className="bg-slate-800/40 rounded-3xl p-8 border border-white/5 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+                        <div className="flex flex-col md:flex-row items-center gap-6">
+                          <div className="w-24 h-24 bg-slate-900 rounded-3xl flex items-center justify-center text-6xl shadow-inner border border-white/5">
+                            {v.emoji}
+                          </div>
+                          <div className="text-center md:text-left">
+                            <h3 className="text-3xl font-extrabold text-slate-100 tracking-tight">{v.name}</h3>
+                            <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
+                              <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-500/20">LEVEL {v.level}</span>
+                              <span className="text-slate-500 text-[10px] font-mono">EXP {v.exp}/{v.maxExp}</span>
+                            </div>
+                            <div className="mt-4 flex gap-2">
+                              <div className="bg-amber-600/20 px-3 py-1.5 rounded-xl border border-amber-500/30">
+                                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-tighter">{v.sp} Skill Points</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Vitality Bar in Detail */}
+                        <div className="w-full md:w-64">
+                           <div className="flex justify-between items-end mb-2">
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Vitalitas</span>
+                             <span className="text-xs font-mono font-bold text-slate-200">{Math.round(v.vitality)} / {v.maxVitality}</span>
+                           </div>
+                           <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-white/5 p-0.5">
+                             <div 
+                               className={`h-full rounded-full transition-all duration-500 ${v.vitality / v.maxVitality > 0.4 ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]' : v.vitality / v.maxVitality > 0.2 ? 'bg-amber-500' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}
+                               style={{ width: `${(v.vitality / v.maxVitality) * 100}%` }}
+                             ></div>
+                           </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Action Panel */}
+                        <div className="flex flex-col gap-4">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Perintah Manual</h4>
+                          <div className="grid grid-cols-4 gap-3">
+                            <ActionButton icon="🌲" onClick={() => onForceOrder(v.id, 'kayu')} title="Kumpul Kayu" />
+                            <ActionButton icon="🍎" onClick={() => onForceOrder(v.id, 'buah')} title="Petik Buah" />
+                            <ActionButton icon="⛰️" onClick={() => onForceOrder(v.id, 'batu')} title="Tambang Batu" />
+                            <ActionButton icon="🏠" onClick={() => onForceOrder(v.id, 'REST')} title="Istirahat" color="rose" />
+                          </div>
+                        </div>
+
+                        {/* Upgrade Panel */}
+                        <div className="flex flex-col gap-4">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Statistik ({v.sp} SP)</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <StatItem 
+                              label="MAX VITALITAS" 
+                              value={v.maxVitality} 
+                              onUpgrade={() => onUpgradeStat(v.id, 'hp')} 
+                              canUpgrade={v.sp > 0}
+                              icon="❤️"
+                            />
+                            <StatItem 
+                              label="DAYA TAHAN" 
+                              value={v.endurance.toFixed(1)} 
+                              onUpgrade={() => onUpgradeStat(v.id, 'vitality')} 
+                              canUpgrade={v.sp > 0}
+                              icon="💊"
+                            />
+                            <StatItem 
+                              label="STRENGTH" 
+                              value={v.strength.toFixed(1)} 
+                              onUpgrade={() => onUpgradeStat(v.id, 'strength')} 
+                              canUpgrade={v.sp > 0}
+                              icon="💪"
+                            />
+                            <StatItem 
+                              label="CAPACITY" 
+                              value={v.storageCapacity} 
+                              onUpgrade={() => onUpgradeStat(v.id, 'storage')} 
+                              canUpgrade={v.sp > 0}
+                              icon="🎒"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-blue-600/20 px-3 py-1 rounded-full border border-blue-500/30">
-                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">{v.sp} SP Available</span>
-                    </div>
-                  </div>
-
-                  {/* Manual Actions inside Modal */}
-                  <div className="flex gap-2 p-2 bg-slate-950/50 rounded-xl border border-white/5">
-                    <ActionButton icon="🌲" onClick={() => onForceOrder(v.id, 'kayu')} title="Kumpul Kayu" />
-                    <ActionButton icon="🍎" onClick={() => onForceOrder(v.id, 'buah')} title="Petik Buah" />
-                    <ActionButton icon="⛰️" onClick={() => onForceOrder(v.id, 'batu')} title="Tambang Batu" />
-                    <ActionButton icon="🏠" onClick={() => onForceOrder(v.id, 'REST')} title="Istirahat" color="rose" />
-                  </div>
-
-                  {/* Stats Upgrade Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <StatItem 
-                      label="MAX HP" 
-                      value={v.maxHp} 
-                      onUpgrade={() => onUpgradeStat(v.id, 'hp')} 
-                      canUpgrade={v.sp > 0}
-                      icon="❤️"
-                    />
-                    <StatItem 
-                      label="VITALITY" 
-                      value={v.vitality.toFixed(1)} 
-                      onUpgrade={() => onUpgradeStat(v.id, 'vitality')} 
-                      canUpgrade={v.sp > 0}
-                      icon="💊"
-                    />
-                    <StatItem 
-                      label="STRENGTH" 
-                      value={v.strength.toFixed(1)} 
-                      onUpgrade={() => onUpgradeStat(v.id, 'strength')} 
-                      canUpgrade={v.sp > 0}
-                      icon="💪"
-                    />
-                    <StatItem 
-                      label="CAPACITY" 
-                      value={v.storageCapacity} 
-                      onUpgrade={() => onUpgradeStat(v.id, 'storage')} 
-                      canUpgrade={v.sp > 0}
-                      icon="🎒"
-                    />
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 

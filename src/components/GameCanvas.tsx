@@ -19,8 +19,8 @@ export interface Villager {
   emoji: string;
   x: number;
   y: number;
-  hp: number;
-  maxHp: number;
+  vitality: number;
+  maxVitality: number;
   state: 'IDLE' | 'MOVING' | 'HARVESTING' | 'RETURNING' | 'RESTING';
   targetItem: ResourceType | null;
   targetAmount: number;
@@ -31,7 +31,7 @@ export interface Villager {
   exp: number;
   maxExp: number;
   sp: number;
-  vitality: number; // Mempengaruhi regenerasi HP
+  endurance: number; // Mempengaruhi regenerasi Vitalitas
   strength: number; // Mempengaruhi kecepatan panen
   storageCapacity: number; // Berapa banyak yang bisa dibawa per siklus
   inventory: number; // Jumlah yang sedang dibawa
@@ -55,11 +55,11 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
   
   // Inisialisasi 5 Penduduk dengan Profil Berbeda
   const villagers = useRef<Villager[]>([
-    { id: 1, name: 'Budi', emoji: '🧑‍🌾', x: 50, y: 50, hp: 100, maxHp: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 2, name: 'Siti', emoji: '👩‍🌾', x: 50, y: 80, hp: 80, maxHp: 80, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 3, name: 'Agus', emoji: '👨‍🌾', x: 50, y: 110, hp: 120, maxHp: 120, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 4, name: 'Dewi', emoji: '👩‍🌾', x: 50, y: 140, hp: 90, maxHp: 90, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 5, name: 'Joko', emoji: '👨‍🌾', x: 50, y: 170, hp: 150, maxHp: 150, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 1, name: 'Budi', emoji: '🧑‍🌾', x: 50, y: 50, vitality: 100, maxVitality: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 2, name: 'Siti', emoji: '👩‍🌾', x: 50, y: 80, vitality: 80, maxVitality: 80, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 3, name: 'Agus', emoji: '👨‍🌾', x: 50, y: 110, vitality: 120, maxVitality: 120, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 4, name: 'Dewi', emoji: '👩‍🌾', x: 50, y: 140, vitality: 90, maxVitality: 90, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 5, name: 'Joko', emoji: '👨‍🌾', x: 50, y: 170, vitality: 150, maxVitality: 150, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
   ]);
 
   // Ekspos fungsi ke parent
@@ -72,10 +72,10 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
       if (targetName) {
         candidate = villagers.current.find(v => 
           v.name.toLowerCase() === targetName.toLowerCase() && 
-          v.state === 'IDLE' && v.hp > 15
+          v.state === 'IDLE' && v.vitality > 15
         );
       } else {
-        candidate = villagers.current.find(v => v.state === 'IDLE' && v.hp > 30);
+        candidate = villagers.current.find(v => v.state === 'IDLE' && v.vitality > 30);
       }
 
       if (candidate) {
@@ -118,11 +118,11 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
       if (!v || v.sp <= 0) return;
 
       if (statName === 'hp') {
-        v.maxHp += 20;
-        v.hp = v.maxHp;
+        v.maxVitality += 20;
+        v.vitality = v.maxVitality;
         v.sp -= 1;
       } else if (statName === 'vitality') {
-        v.vitality += 0.5;
+        v.endurance += 0.5;
         v.sp -= 1;
       } else if (statName === 'strength') {
         v.strength += 0.2;
@@ -170,7 +170,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         // --- LOGIKA STATE MACHINE ---
         
         // 1. Cek Kelelahan (Auto Rest)
-        if (v.hp < 15 && v.state !== 'RESTING' && v.state !== 'IDLE') {
+        if (v.vitality < 15 && v.state !== 'RESTING' && v.state !== 'IDLE') {
           v.state = 'RESTING';
           v.progress = 0;
         }
@@ -186,7 +186,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         // 4. Progress Panen
         if (v.state === 'HARVESTING') {
           v.progress += 0.002 * (0.5 + v.strength * 0.5); // Dipengaruhi strength
-          v.hp -= 0.03 / v.vitality; // VIT mengurangi haus darah/lelah
+          v.vitality -= 0.03 / v.endurance; // DAYA TAHAN mengurangi pengikisan vitalitas
           if (v.progress >= 1) {
             v.inventory = v.storageCapacity; // Ambil barang sesuai kapasitas
             v.state = 'RETURNING';
@@ -221,9 +221,9 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         } 
         else if (v.state === 'RESTING') {
           moveTowards(v, LOCATIONS.HOME, () => {
-            v.hp += 0.25 * v.vitality; // VIT mempercepat pemulihan
-            if (v.hp >= v.maxHp) {
-              v.hp = v.maxHp;
+            v.vitality += 0.25 * v.endurance; // DAYA TAHAN mempercepat pemulihan
+            if (v.vitality >= v.maxVitality) {
+              v.vitality = v.maxVitality;
               // Jika masih dalam status bekerja, kembali ke lokasi
               if (v.isWorking && v.lastTask) {
                 v.targetItem = v.lastTask;
@@ -257,15 +257,15 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         ctx.font = '24px serif';
         ctx.fillText(v.emoji, v.x, v.y);
         
-        // 7. HP Bar (kecil di bawah)
+        // 7. Vitality Bar (kecil di bawah)
         const barWidth = 24;
-        const hpPercent = v.hp / v.maxHp;
+        const vitPercent = v.vitality / v.maxVitality;
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(v.x - barWidth/2, v.y + 15, barWidth, 3);
-        ctx.fillStyle = hpPercent > 0.4 ? '#10b981' : hpPercent > 0.2 ? '#f59e0b' : '#ef4444';
-        ctx.fillRect(v.x - barWidth/2, v.y + 15, barWidth * hpPercent, 3);
+        ctx.fillStyle = vitPercent > 0.4 ? '#3b82f6' : vitPercent > 0.2 ? '#f59e0b' : '#ef4444'; // Pakai warna biru untuk Vitalitas
+        ctx.fillRect(v.x - barWidth/2, v.y + 15, barWidth * vitPercent, 3);
 
-        // 8. Progress bar panen (di bawah HP Bar jika sedang panen)
+        // 8. Progress bar panen (di bawah Bar Vitalitas jika sedang panen)
         if (v.state === 'HARVESTING') {
           ctx.fillStyle = '#334155';
           ctx.fillRect(v.x - barWidth/2, v.y + 20, barWidth, 2);
