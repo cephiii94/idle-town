@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import GameCanvas, { GameCanvasHandle, ResourceType, Villager } from '@/components/GameCanvas';
+import ManagementModal from '@/components/ManagementModal';
 
 // Tipe data untuk resource player
 interface Resources {
@@ -31,6 +32,9 @@ export default function IdleTownPage() {
   
   // State untuk memantau penduduk (dikirim dari Canvas)
   const [villagers, setVillagers] = useState<Villager[]>([]);
+  
+  // State untuk Modal Manajemen
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Ref untuk komunikasi dengan Canvas
   const canvasRef = useRef<GameCanvasHandle>(null);
@@ -116,19 +120,45 @@ export default function IdleTownPage() {
   };
 
   // Fungsi callback dari Canvas ketika karakter menaruh item di gudang
-  const handleGainResource = (item: ResourceType, amount: number) => {
+  const handleGainResource = useRef((item: ResourceType, amount: number) => {
     setResources((prev) => ({
       ...prev,
       [item]: prev[item as keyof Resources] + amount,
     }));
-  };
+  }).current;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 flex flex-col items-center gap-8">
-      {/* Container Utama Atas: Canvas & Visual Stats */}
-      <div className="w-full max-w-7xl grid grid-cols-1 xl:grid-cols-4 gap-8">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center">
+      {/* HEADER UI: Menampilkan Resource & Menu */}
+      <header className="w-full sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-center">
+        <div className="w-full max-w-7xl flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <h1 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 tracking-tighter flex items-center gap-2">
+              <span className="text-2xl">🏡</span> IDLE TOWN
+            </h1>
+            
+            {/* Global Resources in Header */}
+            <div className="hidden md:flex items-center gap-4">
+              <ResourceBadge emoji="🪵" label="KAYU" value={resources.kayu} color="amber" />
+              <ResourceBadge emoji="🍎" label="BUAH" value={resources.buah} color="rose" />
+              <ResourceBadge emoji="🪨" label="BATU" value={resources.batu} color="slate" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] active:scale-95 flex items-center gap-2"
+            >
+              <span>⚙️</span> MANAJEMEN
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="w-full max-w-7xl p-4 md:p-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
         
-        {/* Kolom 1-2: Simulasi Game (Canvas) */}
+        {/* Kolom 1-2: Game Canvas */}
         <div className="xl:col-span-2 space-y-4">
           <GameCanvas 
             ref={canvasRef} 
@@ -137,129 +167,31 @@ export default function IdleTownPage() {
           />
         </div>
 
-        {/* Kolom 3: Resource Indicators & Villager Stats */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-800">
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 mb-6 flex items-center gap-3">
-              🏡 Idle Town <span className="text-xs font-normal text-slate-500 bg-slate-800 px-2 py-1 rounded">v0.2</span>
-            </h1>
-            
-            <div className="grid grid-cols-1 gap-3">
-              <div className="bg-slate-800/50 p-4 rounded-xl border border-amber-900/10 flex items-center justify-between group hover:bg-slate-800 transition-colors">
-                <span className="text-md font-medium flex items-center gap-3">
-                  <span className="p-2 rounded-lg bg-amber-900/20 group-hover:scale-110 transition-transform">🪵</span> 
-                  <span className="text-amber-200/80">Kayu</span>
-                </span>
-                <span className="text-xl font-mono font-bold text-amber-400">{resources.kayu}</span>
-              </div>
-              
-              <div className="bg-slate-800/50 p-4 rounded-xl border border-rose-900/10 flex items-center justify-between group hover:bg-slate-800 transition-colors">
-                <span className="text-md font-medium flex items-center gap-3">
-                  <span className="p-2 rounded-lg bg-rose-900/20 group-hover:scale-110 transition-transform">🍎</span> 
-                  <span className="text-rose-200/80">Buah</span>
-                </span>
-                <span className="text-xl font-mono font-bold text-rose-400">{resources.buah}</span>
-              </div>
-
-              <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/10 flex items-center justify-between group hover:bg-slate-800 transition-colors">
-                <span className="text-md font-medium flex items-center gap-3">
-                  <span className="p-2 rounded-lg bg-slate-700/30 group-hover:scale-110 transition-transform">🪨</span> 
-                  <span className="text-slate-200/80">Batu</span>
-                </span>
-                <span className="text-xl font-mono font-bold text-slate-300">{resources.batu}</span>
-              </div>
+        {/* Kolom 3: Chat Assistant & Aktivitas */}
+        <div className="space-y-6 flex flex-col h-full min-h-[400px]">
+          {/* Info Card Kecil */}
+          <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800/50">
+            <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Aktivitas Penduduk</h2>
+            <div className="space-y-3">
+              {villagers.map(v => (
+                <div key={v.id} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <span>{v.emoji}</span>
+                    <span className="font-bold">{v.name}</span>
+                  </div>
+                  <span className={`font-mono text-[10px] px-2 py-0.5 rounded ${
+                    v.state === 'IDLE' ? 'bg-slate-800 text-slate-500' : 
+                    v.state === 'RESTING' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                  }`}>
+                    {v.state}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50 text-xs text-slate-500 italic leading-relaxed">
-            💡 Karakter akan otomatis pulang ke rumah saat HP rendah (merah) untuk makan dan beristirahat.
-          </div>
-        </div>
-
-        {/* Kolom 4: Village Management (Manual Controls) */}
-        <div className="bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-800 flex flex-col h-full overflow-hidden">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Management</h2>
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          </div>
-          
-          <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
-            {villagers.map((v) => (
-              <div 
-                key={v.id} 
-                className={`bg-slate-800/40 rounded-2xl p-4 border border-white/5 transition-all duration-300 hover:border-emerald-500/30 group ${
-                  v.state !== 'IDLE' ? 'ring-1 ring-emerald-500/20' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl group-hover:scale-110 transition-transform block">{v.emoji}</span>
-                    <div>
-                      <div className="font-bold text-slate-200 text-xs">{v.name}</div>
-                      <div className={`text-[9px] font-bold uppercase tracking-tighter ${
-                        v.state === 'IDLE' ? 'text-slate-600' :
-                        v.state === 'RESTING' ? 'text-rose-400' : 'text-emerald-400'
-                      }`}>
-                        {v.state}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-mono text-slate-500">{Math.round(v.hp)}% HP</span>
-                    <div className="h-1 w-12 bg-slate-950 rounded-full mt-1 overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-500 ${
-                          v.hp > 50 ? 'bg-emerald-500' : v.hp > 20 ? 'bg-amber-500' : 'bg-rose-500'
-                        }`}
-                        style={{ width: `${(v.hp / v.maxHp) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Manual Action Buttons */}
-                <div className="grid grid-cols-4 gap-1.5">
-                  <button 
-                    onClick={() => canvasRef.current?.forceOrder(v.id, 'kayu')}
-                    className="aspect-square flex items-center justify-center rounded-lg bg-slate-900/60 hover:bg-emerald-500/20 border border-white/5 hover:border-emerald-500/40 transition-all text-xs"
-                    title="Kumpulkan Kayu"
-                  >
-                    🪵
-                  </button>
-                  <button 
-                    onClick={() => canvasRef.current?.forceOrder(v.id, 'buah')}
-                    className="aspect-square flex items-center justify-center rounded-lg bg-slate-900/60 hover:bg-emerald-500/20 border border-white/5 hover:border-emerald-500/40 transition-all text-xs"
-                    title="Petik Buah"
-                  >
-                    🍎
-                  </button>
-                  <button 
-                    onClick={() => canvasRef.current?.forceOrder(v.id, 'batu')}
-                    className="aspect-square flex items-center justify-center rounded-lg bg-slate-900/60 hover:bg-emerald-500/20 border border-white/5 hover:border-emerald-500/40 transition-all text-xs"
-                    title="Tambang Batu"
-                  >
-                    🪨
-                  </button>
-                  <button 
-                    onClick={() => canvasRef.current?.forceOrder(v.id, 'REST')}
-                    className="aspect-square flex items-center justify-center rounded-lg bg-slate-900/60 hover:bg-rose-500/20 border border-white/5 hover:border-rose-500/40 transition-all text-xs"
-                    title="Istirahat"
-                  >
-                    🏠
-                  </button>
-                </div>
-
-                {/* Harvesting Progress Indicator */}
-                {v.state === 'HARVESTING' && (
-                  <div className="mt-2 h-0.5 bg-slate-950 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-amber-400 transition-all duration-300"
-                      style={{ width: `${v.progress * 100}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="bg-slate-900/30 p-4 rounded-2xl border border-blue-500/10 text-[10px] text-blue-400/60 italic leading-relaxed">
+            💡 Gunakan tombol ⚙️ MANAJEMEN di atas untuk upgrade statistik HP & Vitalitas penduduk menggunakan SP.
           </div>
         </div>
       </div>
@@ -277,15 +209,7 @@ export default function IdleTownPage() {
         </div>
 
         {/* Chat History */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-slate-900 to-slate-950">
-          {chatHistory.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-slate-700 text-center space-y-3 opacity-40">
-              <span className="text-5xl">🗣️</span>
-              <p className="text-sm italic">Berikan instruksi untuk dikerjakan penduduk...</p>
-            </div>
-          )}
-          
-          {chatHistory.map((msg, idx) => (
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-slate-900 to-slate-950">{chatHistory.map((msg, idx) => (
             <div
               key={idx}
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -332,6 +256,32 @@ export default function IdleTownPage() {
           </div>
         </form>
       </div>
+      <ManagementModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        villagers={villagers}
+        onUpgradeStat={(id, stat) => canvasRef.current?.upgradeStat(id, stat)}
+        onForceOrder={(id, task) => canvasRef.current?.forceOrder(id, task)}
+      />
     </main>
+  );
+}
+
+// Sub-component untuk Badge Resource di Header
+function ResourceBadge({ emoji, label, value, color }: { emoji: string, label: string, value: number, color: string }) {
+  const colors: Record<string, string> = {
+    amber: 'from-amber-500/20 to-amber-900/20 border-amber-500/30 text-amber-200',
+    rose: 'from-rose-500/20 to-rose-900/20 border-rose-500/30 text-rose-200',
+    slate: 'from-slate-500/20 to-slate-900/20 border-slate-500/30 text-slate-200'
+  };
+
+  return (
+    <div className={`flex items-center gap-3 px-4 py-2 rounded-2xl border bg-gradient-to-br ${colors[color]} backdrop-blur-sm shadow-lg`}>
+      <span className="text-lg">{emoji}</span>
+      <div className="flex flex-col">
+        <span className="text-[8px] font-bold opacity-60 tracking-wider">{label}</span>
+        <span className="text-sm font-mono font-black">{value}</span>
+      </div>
+    </div>
   );
 }

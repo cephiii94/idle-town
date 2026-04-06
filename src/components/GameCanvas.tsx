@@ -25,12 +25,23 @@ export interface Villager {
   targetItem: ResourceType | null;
   targetAmount: number;
   progress: number;
-  lastTask: ResourceType | null; // Untuk kembali bekerja setelah istirahat
+  lastTask: ResourceType | null; 
+  isWorking: boolean; 
+  level: number;
+  exp: number;
+  maxExp: number;
+  sp: number;
+  vitality: number; // Mempengaruhi regenerasi HP
+  strength: number; // Mempengaruhi kecepatan panen
+  storageCapacity: number; // Berapa banyak yang bisa dibawa per siklus
+  inventory: number; // Jumlah yang sedang dibawa
 }
 
 export interface GameCanvasHandle {
   orderFarm: (item: ResourceType, amount: number, targetName?: string | null) => boolean;
   forceOrder: (villagerId: number, task: ResourceType | 'REST') => void;
+  stopWork: (villagerId: number) => void;
+  upgradeStat: (villagerId: number, statName: string) => void;
   getVillagers: () => Villager[];
 }
 
@@ -44,11 +55,11 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
   
   // Inisialisasi 5 Penduduk dengan Profil Berbeda
   const villagers = useRef<Villager[]>([
-    { id: 1, name: 'Budi', emoji: '🧑‍🌾', x: 50, y: 50, hp: 100, maxHp: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null },
-    { id: 2, name: 'Siti', emoji: '👩‍🌾', x: 50, y: 80, hp: 80, maxHp: 80, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null },
-    { id: 3, name: 'Agus', emoji: '👨‍🌾', x: 50, y: 110, hp: 120, maxHp: 120, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null },
-    { id: 4, name: 'Dewi', emoji: '👩‍🌾', x: 50, y: 140, hp: 90, maxHp: 90, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null },
-    { id: 5, name: 'Joko', emoji: '👨‍🌾', x: 50, y: 170, hp: 150, maxHp: 150, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null },
+    { id: 1, name: 'Budi', emoji: '🧑‍🌾', x: 50, y: 50, hp: 100, maxHp: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 2, name: 'Siti', emoji: '👩‍🌾', x: 50, y: 80, hp: 80, maxHp: 80, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 3, name: 'Agus', emoji: '👨‍🌾', x: 50, y: 110, hp: 120, maxHp: 120, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 4, name: 'Dewi', emoji: '👩‍🌾', x: 50, y: 140, hp: 90, maxHp: 90, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 5, name: 'Joko', emoji: '👨‍🌾', x: 50, y: 170, hp: 150, maxHp: 150, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, vitality: 1, strength: 1, storageCapacity: 10, inventory: 0 },
   ]);
 
   // Ekspos fungsi ke parent
@@ -71,6 +82,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         candidate.targetItem = item;
         candidate.targetAmount = amount;
         candidate.lastTask = item;
+        candidate.isWorking = true; // Aktifkan mode looping
         candidate.state = 'MOVING';
         return true;
       }
@@ -84,13 +96,42 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
       if (task === 'REST') {
         v.state = 'RESTING';
         v.lastTask = null;
+        v.isWorking = false;
       } else {
         v.targetItem = task as ResourceType;
         v.targetAmount = Math.floor(Math.random() * 20) + 30;
         v.lastTask = task as ResourceType;
+        v.isWorking = true;
         v.state = 'MOVING';
       }
       v.progress = 0;
+    },
+    stopWork: (villagerId) => {
+      const v = villagers.current.find(v => v.id === villagerId);
+      if (v) {
+        console.log(`[Canvas] Stopping work for ${v.name}`);
+        v.isWorking = false;
+      }
+    },
+    upgradeStat: (villagerId, statName) => {
+      const v = villagers.current.find(v => v.id === villagerId);
+      if (!v || v.sp <= 0) return;
+
+      if (statName === 'hp') {
+        v.maxHp += 20;
+        v.hp = v.maxHp;
+        v.sp -= 1;
+      } else if (statName === 'vitality') {
+        v.vitality += 0.5;
+        v.sp -= 1;
+      } else if (statName === 'strength') {
+        v.strength += 0.2;
+        v.sp -= 1;
+      } else if (statName === 'storage') {
+        v.storageCapacity += 5;
+        v.sp -= 1;
+      }
+      onUpdateVillagers([...villagers.current]);
     },
     getVillagers: () => villagers.current,
   }));
@@ -102,7 +143,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
     if (!ctx) return;
 
     let animationFrameId: number;
-    let lastUpdate = 0;
+    let lastUpdate = -1000; // Pastikan update pertama langsung terkirim
 
     const render = (time: number) => {
       // Pembatasan update state agar tidak terlalu cepat
@@ -144,31 +185,52 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         } 
         // 4. Progress Panen
         if (v.state === 'HARVESTING') {
-          v.progress += 0.002; // Diperlambat agar progres kerja terlihat (~8-10 detik)
-          v.hp -= 0.03; // HP berkurang saat kerja
+          v.progress += 0.002 * (0.5 + v.strength * 0.5); // Dipengaruhi strength
+          v.hp -= 0.03 / v.vitality; // VIT mengurangi haus darah/lelah
           if (v.progress >= 1) {
+            v.inventory = v.storageCapacity; // Ambil barang sesuai kapasitas
             v.state = 'RETURNING';
           }
         } 
         else if (v.state === 'RETURNING') {
           moveTowards(v, LOCATIONS.STORAGE, () => {
             if (v.targetItem) {
-              onGainResource(v.targetItem, v.targetAmount);
+              onGainResource(v.targetItem, v.inventory);
+              
+              // Tambah EXP saat berhasil stor
+              v.exp += 25;
+              if (v.exp >= v.maxExp) {
+                v.level += 1;
+                v.exp = 0;
+                v.maxExp = Math.floor(v.maxExp * 1.25);
+                v.sp += 3; // Beri 3 SP tiap level
+                console.log(`${v.name} LEVEL UP TO ${v.level}!`);
+              }
             }
-            v.state = 'IDLE'; // Kembali IDLE setelah taruh barang
+            v.inventory = 0;
+            
+            // Logika Looping: Jika masih harus bekerja, kembali MOVING
+            if (v.isWorking && v.lastTask) {
+              v.targetItem = v.lastTask;
+              v.state = 'MOVING';
+            } else {
+              v.state = 'IDLE';
+              v.lastTask = null;
+            }
           });
         } 
         else if (v.state === 'RESTING') {
           moveTowards(v, LOCATIONS.HOME, () => {
-            v.hp += 0.25; // Pemulihan HP di rumah
+            v.hp += 0.25 * v.vitality; // VIT mempercepat pemulihan
             if (v.hp >= v.maxHp) {
               v.hp = v.maxHp;
-              // Jika ada tugas terakhir, kembali bekerja
-              if (v.lastTask) {
+              // Jika masih dalam status bekerja, kembali ke lokasi
+              if (v.isWorking && v.lastTask) {
                 v.targetItem = v.lastTask;
                 v.state = 'MOVING';
               } else {
                 v.state = 'IDLE';
+                v.lastTask = null;
               }
             }
           });
@@ -221,7 +283,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
     };
 
     const moveTowards = (entity: any, target: {x: number, y: number}, onReach: () => void) => {
-      const speed = 1.2;
+      const speed = 0.6; // Diperlambat agar lebih santai
       const dx = target.x - entity.x;
       const dy = target.y - entity.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
