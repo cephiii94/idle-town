@@ -17,16 +17,19 @@ export interface Villager {
   id: number;
   name: string;
   emoji: string;
+  gender: 'Pria' | 'Wanita';
   x: number;
   y: number;
   vitality: number;
   maxVitality: number;
-  state: 'IDLE' | 'MOVING' | 'HARVESTING' | 'RETURNING' | 'RESTING';
+  state: 'IDLE' | 'MOVING' | 'HARVESTING' | 'RETURNING' | 'RESTING' | 'PREGNANT';
   targetItem: ResourceType | null;
   targetAmount: number;
   progress: number;
+  gestationProgress: number;
   lastTask: ResourceType | null; 
   isWorking: boolean; 
+  isPregnant: boolean;
   level: number;
   exp: number;
   maxExp: number;
@@ -37,43 +40,50 @@ export interface Villager {
   inventory: number; // Jumlah yang sedang dibawa
 }
 
+export interface TownData {
+  houseLevel: number;
+  capacity: number;
+  villagerCount: number;
+}
+
 export interface GameCanvasHandle {
   orderFarm: (item: ResourceType, amount: number, targetName?: string | null) => boolean;
   forceOrder: (villagerId: number, task: ResourceType | 'REST') => void;
   stopWork: (villagerId: number) => void;
   upgradeStat: (villagerId: number, statName: string) => void;
+  upgradeHouse: () => boolean;
   getVillagers: () => Villager[];
+  getTownData: () => TownData;
 }
 
 interface Props {
   onGainResource: (item: ResourceType, amount: number) => void;
   onUpdateVillagers: (villagers: Villager[]) => void;
+  onUpdateTown: (town: TownData) => void;
 }
 
-const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpdateVillagers }, ref) => {
+const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpdateVillagers, onUpdateTown }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Inisialisasi 5 Penduduk dengan Profil Berbeda
+  // Inisialisasi Kota
+  const town = useRef<TownData>({
+    houseLevel: 1,
+    capacity: 3,
+    villagerCount: 2
+  });
+
+  // Reset Penduduk Awal (1 Pria, 1 Wanita)
   const villagers = useRef<Villager[]>([
-    { id: 1, name: 'Budi', emoji: '🧑‍🌾', x: 50, y: 50, vitality: 100, maxVitality: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 2, name: 'Siti', emoji: '👩‍🌾', x: 50, y: 80, vitality: 80, maxVitality: 80, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 3, name: 'Agus', emoji: '👨‍🌾', x: 50, y: 110, vitality: 120, maxVitality: 120, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 4, name: 'Dewi', emoji: '👩‍🌾', x: 50, y: 140, vitality: 90, maxVitality: 90, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
-    { id: 5, name: 'Joko', emoji: '👨‍🌾', x: 50, y: 170, vitality: 150, maxVitality: 150, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, lastTask: null, isWorking: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1, strength: 1, storageCapacity: 10, inventory: 0 },
+    { id: 1, name: 'Budi', gender: 'Pria', emoji: '🧑‍🌾', x: 40, y: 50, vitality: 100, maxVitality: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, gestationProgress: 0, lastTask: null, isWorking: false, isPregnant: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1.2, strength: 1.2, storageCapacity: 12, inventory: 0 },
+    { id: 2, name: 'Siti', gender: 'Wanita', emoji: '👩‍🌾', x: 60, y: 50, vitality: 100, maxVitality: 100, state: 'IDLE', targetItem: null, targetAmount: 0, progress: 0, gestationProgress: 0, lastTask: null, isWorking: false, isPregnant: false, level: 1, exp: 0, maxExp: 100, sp: 0, endurance: 1.0, strength: 1.0, storageCapacity: 10, inventory: 0 },
   ]);
 
   // Ekspos fungsi ke parent
   useImperativeHandle(ref, () => ({
     orderFarm: (item, amount, targetName = null) => {
-      console.log(`[Canvas] Menerima perintah AI: ${item} (Amount: ${amount}, Target: ${targetName || 'Siapa saja'})`);
-      
       let candidate: Villager | undefined;
-
       if (targetName) {
-        candidate = villagers.current.find(v => 
-          v.name.toLowerCase() === targetName.toLowerCase() && 
-          v.state === 'IDLE' && v.vitality > 15
-        );
+        candidate = villagers.current.find(v => v.name.toLowerCase() === targetName.toLowerCase() && v.state === 'IDLE' && v.vitality > 15);
       } else {
         candidate = villagers.current.find(v => v.state === 'IDLE' && v.vitality > 30);
       }
@@ -82,7 +92,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
         candidate.targetItem = item;
         candidate.targetAmount = amount;
         candidate.lastTask = item;
-        candidate.isWorking = true; // Aktifkan mode looping
+        candidate.isWorking = true;
         candidate.state = 'MOVING';
         return true;
       }
@@ -92,7 +102,6 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
       const v = villagers.current.find(v => v.id === villagerId);
       if (!v) return;
 
-      console.log(`[Canvas] Manual Order for ${v.name}: ${task}`);
       if (task === 'REST') {
         v.state = 'RESTING';
         v.lastTask = null;
@@ -108,10 +117,7 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
     },
     stopWork: (villagerId) => {
       const v = villagers.current.find(v => v.id === villagerId);
-      if (v) {
-        console.log(`[Canvas] Stopping work for ${v.name}`);
-        v.isWorking = false;
-      }
+      if (v) v.isWorking = false;
     },
     upgradeStat: (villagerId, statName) => {
       const v = villagers.current.find(v => v.id === villagerId);
@@ -120,20 +126,28 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
       if (statName === 'hp') {
         v.maxVitality += 20;
         v.vitality = v.maxVitality;
-        v.sp -= 1;
       } else if (statName === 'vitality') {
         v.endurance += 0.5;
-        v.sp -= 1;
       } else if (statName === 'strength') {
         v.strength += 0.2;
-        v.sp -= 1;
       } else if (statName === 'storage') {
         v.storageCapacity += 5;
-        v.sp -= 1;
       }
+      v.sp -= 1;
       onUpdateVillagers([...villagers.current]);
     },
+    upgradeHouse: () => {
+      const caps = [0, 3, 4, 6, 7, 8];
+      if (town.current.houseLevel < 5) {
+        town.current.houseLevel++;
+        town.current.capacity = caps[town.current.houseLevel];
+        onUpdateTown({ ...town.current });
+        return true;
+      }
+      return false;
+    },
     getVillagers: () => villagers.current,
+    getTownData: () => town.current,
   }));
 
   useEffect(() => {
@@ -166,11 +180,15 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
       });
 
       // Update & Gambar tiap Villager
+      const now = Date.now();
+      const currentVillagerCount = villagers.current.length;
+      const isOverCapacity = currentVillagerCount > town.current.capacity;
+
       villagers.current.forEach(v => {
         // --- LOGIKA STATE MACHINE ---
         
-        // 1. Cek Kelelahan (Auto Rest)
-        if (v.vitality < 15 && v.state !== 'RESTING' && v.state !== 'IDLE') {
+        // Cek Kelelahan (Auto Rest)
+        if (v.vitality < 10 && v.state !== 'RESTING' && v.state !== 'PREGNANT' && v.state !== 'IDLE') {
           v.state = 'RESTING';
           v.progress = 0;
         }
@@ -183,12 +201,11 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
             v.progress = 0;
           });
         } 
-        // 4. Progress Panen
-        if (v.state === 'HARVESTING') {
-          v.progress += 0.002 * (0.5 + v.strength * 0.5); // Dipengaruhi strength
-          v.vitality -= 0.03 / v.endurance; // DAYA TAHAN mengurangi pengikisan vitalitas
+        else if (v.state === 'HARVESTING') {
+          v.progress += 0.002 * (0.5 + v.strength * 0.5);
+          v.vitality -= 0.04 / v.endurance;
           if (v.progress >= 1) {
-            v.inventory = v.storageCapacity; // Ambil barang sesuai kapasitas
+            v.inventory = v.storageCapacity;
             v.state = 'RETURNING';
           }
         } 
@@ -196,90 +213,235 @@ const GameCanvas = forwardRef<GameCanvasHandle, Props>(({ onGainResource, onUpda
           moveTowards(v, LOCATIONS.STORAGE, () => {
             if (v.targetItem) {
               onGainResource(v.targetItem, v.inventory);
-              
-              // Tambah EXP saat berhasil stor
               v.exp += 25;
               if (v.exp >= v.maxExp) {
                 v.level += 1;
                 v.exp = 0;
                 v.maxExp = Math.floor(v.maxExp * 1.25);
-                v.sp += 3; // Beri 3 SP tiap level
-                console.log(`${v.name} LEVEL UP TO ${v.level}!`);
+                v.sp += 3;
               }
             }
             v.inventory = 0;
-            
-            // Logika Looping: Jika masih harus bekerja, kembali MOVING
             if (v.isWorking && v.lastTask) {
               v.targetItem = v.lastTask;
               v.state = 'MOVING';
             } else {
               v.state = 'IDLE';
-              v.lastTask = null;
             }
           });
         } 
         else if (v.state === 'RESTING') {
           moveTowards(v, LOCATIONS.HOME, () => {
-            v.vitality += 0.25 * v.endurance; // DAYA TAHAN mempercepat pemulihan
+            // Homeless Penalty: Jika melebihi kapasitas, regenerasi lebih lambat
+            const regenMultiplier = isOverCapacity ? 0.3 : 1;
+            v.vitality += 0.25 * v.endurance * regenMultiplier;
+
             if (v.vitality >= v.maxVitality) {
               v.vitality = v.maxVitality;
-              // Jika masih dalam status bekerja, kembali ke lokasi
               if (v.isWorking && v.lastTask) {
                 v.targetItem = v.lastTask;
                 v.state = 'MOVING';
               } else {
                 v.state = 'IDLE';
-                v.lastTask = null;
+              }
+            }
+
+            // --- LOGIKA REPRODUKSI (CERITA DI RUMAH) ---
+            if (v.gender === 'Wanita' && !v.isPregnant && currentVillagerCount < town.current.capacity) {
+              // Cek apakah ada Pria yang juga sedang istirahat di rumah
+              const partner = villagers.current.find(other => 
+                other.gender === 'Pria' && 
+                other.state === 'RESTING' && 
+                Math.abs(other.x - v.x) < 20 &&
+                other.vitality > 80
+              );
+
+              if (partner && Math.random() < 0.001) { // Peluang kecil tiap frame
+                v.isPregnant = true;
+                v.state = 'PREGNANT';
+                v.gestationProgress = 0;
+                console.log(`${v.name} mulai mengandung!`);
               }
             }
           });
         }
+        else if (v.state === 'PREGNANT') {
+          moveTowards(v, LOCATIONS.HOME, () => {
+            // 30 Detik Gestasi (60fps * 30s = 1800 frames)
+            v.gestationProgress += 1 / 1800; 
+            
+            if (v.gestationProgress >= 1) {
+              // MELAHIRKAN
+              const namesM = ["Arka", "Kenzo", "Rafa", "Zaki", "Elio"];
+              const namesF = ["Kira", "Nala", "Zia", "Lulu", "Feya"];
+              const babyGender = Math.random() > 0.5 ? 'Pria' : 'Wanita';
+              const babyName = babyGender === 'Pria' ? namesM[Math.floor(Math.random() * namesM.length)] : namesF[Math.floor(Math.random() * namesF.length)];
+              
+              const newVillager: Villager = {
+                id: now + Math.random(),
+                name: babyName,
+                gender: babyGender,
+                emoji: babyGender === 'Pria' ? '👶' : '👧', 
+                x: v.x + (Math.random() - 0.5) * 20,
+                y: v.y + 20,
+                vitality: 100,
+                maxVitality: 100,
+                state: 'IDLE',
+                targetItem: null,
+                targetAmount: 0,
+                progress: 0,
+                gestationProgress: 0,
+                lastTask: null,
+                isWorking: false,
+                isPregnant: false,
+                level: 1,
+                exp: 0,
+                maxExp: 100,
+                sp: 0,
+                endurance: 1,
+                strength: 1,
+                storageCapacity: 10,
+                inventory: 0
+              };
+
+              villagers.current.push(newVillager);
+              town.current.villagerCount = villagers.current.length;
+              onUpdateTown({ ...town.current });
+
+              v.isPregnant = false;
+              v.state = 'RESTING';
+              v.gestationProgress = 0;
+              console.log(`${v.name} melahirkan ${babyName}!`);
+            }
+          });
+        }
         else if (v.state === 'IDLE') {
-          // Sedikit pergerakan acak saat idle
-          v.x += (Math.random() - 0.5) * 0.5;
-          v.y += (Math.random() - 0.5) * 0.5;
+          v.x += (Math.random() - 0.5) * 0.3;
+          v.y += (Math.random() - 0.5) * 0.3;
         }
 
-        // --- DRAWING VILLAGER ---
+        // --- DRAWING VILLAGER (ANIMATED PURE ORB) ---
         
-        // 5. Gambar Status Label (di atas karakter)
+        let labelColor = '#38bdf8';
+        if (v.state === 'PREGNANT') labelColor = '#d946ef'; // Magenta untuk hamil
+        else if (v.state === 'RESTING' || v.vitality < 20) labelColor = '#f43f5e';
+
         if (v.state !== 'IDLE') {
-          ctx.font = 'bold 8px sans-serif';
-          ctx.fillStyle = v.state === 'RESTING' ? '#ef4444' : '#10b981';
-          const label = v.state === 'MOVING' ? 'MENUJU LOKASI...' : 
-                        v.state === 'HARVESTING' ? `PANEN ${v.targetItem?.toUpperCase()}...` : 
-                        v.state === 'RETURNING' ? 'PULANG...' : 'ISTIRAHAT...';
+          ctx.font = 'bold 8px "Inter", sans-serif';
+          ctx.fillStyle = labelColor;
+          const label = v.state === 'MOVING' ? 'MENUJU LOKASI' : 
+                        v.state === 'HARVESTING' ? `PANEN ${v.targetItem?.toUpperCase()}` : 
+                        v.state === 'RETURNING' ? 'PULANG' : 
+                        v.state === 'PREGNANT' ? `HAMIL (${Math.floor(v.gestationProgress * 100)}%)` : 'ISTIRAHAT';
+          ctx.textAlign = 'center';
           ctx.fillText(label, v.x, v.y - 30);
         }
 
-        // 6. Gambar Karakter
-        ctx.font = '24px serif';
-        ctx.fillText(v.emoji, v.x, v.y);
-        
-        // 7. Vitality Bar (kecil di bawah)
-        const barWidth = 24;
+        // 6. Gambar Karakter Orb
+        const orbRadius = 11;
         const vitPercent = v.vitality / v.maxVitality;
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(v.x - barWidth/2, v.y + 15, barWidth, 3);
-        ctx.fillStyle = vitPercent > 0.4 ? '#3b82f6' : vitPercent > 0.2 ? '#f59e0b' : '#ef4444'; // Pakai warna biru untuk Vitalitas
-        ctx.fillRect(v.x - barWidth/2, v.y + 15, barWidth * vitPercent, 3);
+        
+        const isMoving = v.state === 'MOVING' || v.state === 'RETURNING' || v.state === 'RESTING' || v.state === 'PREGNANT';
+        const bob = isMoving ? Math.sin(now * 0.008) * 3 : 0;
+        const drawY = v.y + bob;
 
-        // 8. Progress bar panen (di bawah Bar Vitalitas jika sedang panen)
-        if (v.state === 'HARVESTING') {
-          ctx.fillStyle = '#334155';
-          ctx.fillRect(v.x - barWidth/2, v.y + 20, barWidth, 2);
-          ctx.fillStyle = '#fbbf24';
-          ctx.fillRect(v.x - barWidth/2, v.y + 20, barWidth * v.progress, 2);
+        let orbColor = '#38bdf8'; 
+        let glowColor = 'rgba(56, 189, 248, 0.7)';
+        
+        if (v.state === 'PREGNANT') {
+          orbColor = '#d946ef';
+          glowColor = 'rgba(217, 70, 239, 0.7)';
+        } else if (v.state === 'RESTING' || v.vitality < 20) {
+          orbColor = '#f43f5e';
+          glowColor = 'rgba(244, 63, 94, 0.7)';
+        } else if (v.state === 'HARVESTING') {
+          orbColor = '#fbbf24';
+          glowColor = 'rgba(251, 191, 36, 0.7)';
+        } else if (v.state === 'RETURNING') {
+          orbColor = '#10b981';
+          glowColor = 'rgba(16, 185, 129, 0.7)';
         }
 
+        ctx.save();
+        ctx.shadowBlur = isMoving ? 15 + Math.sin(now * 0.01) * 5 : 12;
+        ctx.shadowColor = glowColor;
+        
+        const orbGrad = ctx.createRadialGradient(v.x - orbRadius/3, drawY - orbRadius/3, 1, v.x, drawY, orbRadius);
+        orbGrad.addColorStop(0, v.state === 'PREGNANT' ? '#fdf4ff' : '#ffffff');
+        orbGrad.addColorStop(0.2, orbColor);
+        orbGrad.addColorStop(1, '#020617');
+        
+        ctx.beginPath();
+        ctx.arc(v.x, drawY, orbRadius, 0, Math.PI * 2);
+        ctx.fillStyle = orbGrad;
+        ctx.fill();
+        
+        ctx.strokeStyle = orbColor + 'aa';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(v.x - orbRadius/2.5, drawY - orbRadius/2.5, orbRadius/3, orbRadius/4, -Math.PI/4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fill();
+        
+        ctx.restore();
+
+        // 7. Vitality Bar (Mini & Clean)
+        const barWidth = 18;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        roundRect(ctx, v.x - barWidth/2, drawY + 18, barWidth, 2.5, 1);
+        ctx.fill();
+        
+        ctx.fillStyle = vitPercent > 0.4 ? '#38bdf8' : vitPercent > 0.2 ? '#fbbf24' : '#f43f5e';
+        roundRect(ctx, v.x - barWidth/2, drawY + 18, barWidth * vitPercent, 2.5, 1);
+        ctx.fill();
+
+        // 8. Progress ring (Spinning around orb)
+        if (v.state === 'HARVESTING') {
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(v.x, drawY, orbRadius + 4, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * v.progress));
+          ctx.stroke();
+        }
+
+        // Level Badge (Floating static beside)
+        ctx.beginPath();
+        ctx.arc(v.x + 10, drawY + 10, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+        ctx.strokeStyle = orbColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.font = 'bold 6px "Inter", sans-serif';
+        ctx.fillStyle = '#f8fafc';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText(v.level.toString(), v.x + 10, drawY + 10);
+
         // Nama
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText(v.name, v.x, v.y + 10);
+        ctx.font = '8px "Inter", sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.textBaseline = 'top';
+        ctx.fillText(v.name.toUpperCase(), v.x, drawY + 23);
       });
 
       animationFrameId = requestAnimationFrame(render);
+    };
+
+    // Helper untuk rounded rectangle (karena canvas asli tidak punya)
+    const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+      if (w < 2 * r) r = w / 2;
+      if (h < 2 * r) r = h / 2;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
     };
 
     const moveTowards = (entity: any, target: {x: number, y: number}, onReach: () => void) => {

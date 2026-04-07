@@ -30,6 +30,7 @@ export default function PlayPage() {
 
   // State untuk memantau penduduk (dikirim dari Canvas)
   const [villagers, setVillagers] = useState<Villager[]>([]);
+  const [townData, setTownData] = useState<any>({ houseLevel: 1, capacity: 3, villagerCount: 2 });
   
   // State untuk Modal Manajemen
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,20 +83,36 @@ export default function PlayPage() {
               ref={canvasRef} 
               onGainResource={handleGainResource} 
               onUpdateVillagers={setVillagers}
+              onUpdateTown={setTownData}
             />
           </div>
 
           {/* Kolom 3: Info Aktivitas */}
           <div className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800/50 shadow-inner flex flex-col overflow-hidden max-h-full">
-            <h2 className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 flex-none">Aktivitas Penduduk</h2>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2 className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] flex-none">Aktivitas Penduduk</h2>
+              <div className="text-[9px] font-bold text-blue-400/80 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                🏠 LVL {townData.houseLevel} ({townData.villagerCount}/{townData.capacity})
+              </div>
+            </div>
             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
               {villagers.map(v => (
                 <div key={v.id} className="flex items-center justify-between text-xs p-2.5 bg-slate-950/50 rounded-xl border border-white/5 transition-all hover:border-blue-500/30">
                   <div className="flex items-center gap-2.5 text-slate-300">
-                    <span className="text-xl">{v.emoji}</span>
+                    <div className={`w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] border border-white/10 ${
+                      v.state === 'PREGNANT' ? 'bg-fuchsia-500 animate-pulse' :
+                      v.state === 'RESTING' || v.vitality < 20 ? 'bg-rose-500' : 
+                      v.state === 'HARVESTING' ? 'bg-amber-500' :
+                      v.state === 'RETURNING' ? 'bg-emerald-500' :
+                      'bg-blue-500'
+                    }`}></div>
                     <div className="flex flex-col">
-                      <span className="font-bold tracking-tight text-[11px] leading-none mb-1">{v.name}</span>
-                      <span className="text-[8px] text-slate-500 uppercase font-mono tracking-widest leading-none">{v.state}</span>
+                      <span className="font-bold tracking-tight text-[11px] leading-none mb-1">
+                        {v.name} {v.state === 'PREGNANT' && '🤰'}
+                      </span>
+                      <span className="text-[8px] text-slate-500 uppercase font-mono tracking-widest leading-none">
+                        {v.state === 'PREGNANT' ? `HAMIL ${Math.floor(v.gestationProgress * 100)}%` : v.state}
+                      </span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 min-w-[50px]">
@@ -113,7 +130,7 @@ export default function PlayPage() {
             </div>
             
             <div className="mt-3 bg-slate-950/40 p-3 rounded-xl border border-blue-500/10 text-[9px] text-blue-400/60 italic leading-snug flex-none">
-              💡 Klik tombol ⚙️ MANAJEMEN untuk perintah manual atau upgrade.
+              💡 {townData.villagerCount > townData.capacity ? '⚠️ OVERKAPASITAS! Penduduk tunawisma regenerasi lebih lambat.' : 'Klik tombol ⚙️ MANAJEMEN untuk perintah manual atau upgrade.'}
             </div>
           </div>
         </div>
@@ -128,8 +145,11 @@ export default function PlayPage() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         villagers={villagers}
+        townData={townData}
+        resources={resources}
         onUpgradeStat={(id, stat) => canvasRef.current?.upgradeStat(id, stat)}
         onForceOrder={(id, task) => canvasRef.current?.forceOrder(id, task)}
+        onUpgradeHouse={() => canvasRef.current?.upgradeHouse() || false}
       />
     </main>
   );

@@ -7,23 +7,40 @@ interface ManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   villagers: Villager[];
+  townData: any;
+  resources: { kayu: number; buah: number; batu: number };
   onUpgradeStat: (villagerId: number, statName: string) => void;
   onForceOrder: (villagerId: number, task: ResourceType | 'REST') => void;
+  onUpgradeHouse: () => boolean;
 }
 
-export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeStat, onForceOrder }: ManagementModalProps) {
+export default function ManagementModal({ 
+  isOpen, onClose, villagers, townData, resources, onUpgradeStat, onForceOrder, onUpgradeHouse 
+}: ManagementModalProps) {
   const [activeTab, setActiveTab] = useState<'karakter' | 'town'>('karakter');
   const [selectedVillagerId, setSelectedVillagerId] = useState<number | null>(null);
 
   if (!isOpen) return null;
 
+  const houseUpgradeCosts = [
+    { wood: 0, stone: 0 },
+    { wood: 30, stone: 0 },   // Lvl 2
+    { wood: 80, stone: 30 },  // Lvl 3
+    { wood: 150, stone: 80 }, // Lvl 4
+    { wood: 300, stone: 200 },// Lvl 5
+  ];
+
+  const nextLevel = townData.houseLevel < 5 ? townData.houseLevel + 1 : null;
+  const upgradeCost = nextLevel ? houseUpgradeCosts[nextLevel - 1] : null;
+  const canAfford = upgradeCost ? (resources.kayu >= upgradeCost.wood && resources.batu >= upgradeCost.stone) : false;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
       <div className="bg-slate-900 w-full max-w-4xl max-h-[80vh] rounded-3xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 text-white">
           <div className="flex items-center gap-6">
-            <h2 className="text-xl font-bold text-slate-100 uppercase tracking-tighter">Manajemen Desa</h2>
+            <h2 className="text-xl font-bold uppercase tracking-tighter">Manajemen Desa</h2>
             <div className="flex gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
               <button 
                 onClick={() => { setActiveTab('karakter'); setSelectedVillagerId(null); }}
@@ -61,22 +78,40 @@ export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeS
                 </div>
               ) : !selectedVillagerId ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {villagers.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => setSelectedVillagerId(v.id)}
-                      className="group relative bg-slate-800/40 hover:bg-blue-600/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/50 transition-all flex flex-col items-center gap-3 active:scale-95 text-center"
-                    >
-                      <span className="text-5xl group-hover:scale-110 transition-transform duration-300">{v.emoji}</span>
-                      <div>
-                        <h3 className="font-bold text-slate-100 group-hover:text-blue-400 text-base">{v.name}</h3>
-                        <p className="text-[10px] text-slate-500 font-mono">LVL {v.level}</p>
-                      </div>
-                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-blue-400 text-xs">➔</span>
-                      </div>
-                    </button>
-                  ))}
+                    {villagers.map((v) => {
+                      const isWarning = v.state === 'RESTING' || v.vitality < 20;
+                      const isPregnant = v.state === 'PREGNANT';
+                      const orbColor = isPregnant ? 'bg-fuchsia-500 shadow-fuchsia-500/40' :
+                                      isWarning ? 'bg-rose-500 shadow-rose-500/40' : 
+                                      v.state === 'HARVESTING' ? 'bg-amber-500 shadow-amber-500/40' :
+                                      v.state === 'RETURNING' ? 'bg-emerald-500 shadow-emerald-500/40' :
+                                      'bg-blue-500 shadow-blue-500/40';
+
+                      return (
+                        <button
+                          key={v.id}
+                          onClick={() => setSelectedVillagerId(v.id)}
+                          className="group relative bg-slate-800/40 hover:bg-blue-600/10 rounded-2xl p-6 border border-white/5 hover:border-blue-500/50 transition-all flex flex-col items-center gap-4 active:scale-95 text-center overflow-hidden"
+                        >
+                          <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.3)] border-2 border-white/10 relative transition-transform duration-300 group-hover:scale-110
+                            ${orbColor}`}>
+                            <div className="absolute top-1 left-2 w-1/2 h-1/3 bg-white/20 rounded-full blur-[2px] -rotate-12"></div>
+                            
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-slate-900 rounded-full border border-blue-500 flex items-center justify-center text-[10px] font-bold text-white shadow-xl">
+                              {v.level}
+                            </div>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-100 group-hover:text-blue-400 text-sm whitespace-nowrap">
+                              {v.name} {isPregnant && '(🤰)'}
+                            </h3>
+                            <div className="flex items-center gap-2 justify-center mt-1">
+                               <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{v.gender} • {v.state}</p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                 </div>
               ) : (
                 <div className="flex flex-col gap-6">
@@ -84,7 +119,7 @@ export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeS
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={() => setSelectedVillagerId(null)}
-                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all text-xs font-bold"
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 transition-all text-xs font-bold"
                     >
                       ← Kembali ke List
                     </button>
@@ -96,14 +131,26 @@ export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeS
                     <div key={v.id} className="bg-slate-800/40 rounded-3xl p-8 border border-white/5 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                       <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
                         <div className="flex flex-col md:flex-row items-center gap-6">
-                          <div className="w-24 h-24 bg-slate-900 rounded-3xl flex items-center justify-center text-6xl shadow-inner border border-white/5">
-                            {v.emoji}
+                          <div className="relative group">
+                            <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl border-4 border-white/10 relative
+                              ${v.state === 'PREGNANT' ? 'bg-fuchsia-500 animate-pulse' :
+                                v.state === 'RESTING' || v.vitality < 20 ? 'bg-rose-500 shadow-rose-500/40' : 
+                                v.state === 'HARVESTING' ? 'bg-amber-500 shadow-amber-500/40' :
+                                v.state === 'RETURNING' ? 'bg-emerald-500 shadow-emerald-500/40' :
+                                'bg-blue-500 shadow-blue-500/40'}`}>
+                              {/* Inner Shine for 3D look */}
+                              <div className="absolute top-2 left-4 w-1/2 h-1/3 bg-white/30 rounded-full blur-[4px] -rotate-12"></div>
+                            </div>
+                            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-slate-900 rounded-2xl border-2 border-blue-500 flex items-center justify-center text-xs font-black text-white shadow-2xl rotate-12">
+                              {v.level}
+                            </div>
                           </div>
                           <div className="text-center md:text-left">
-                            <h3 className="text-3xl font-extrabold text-slate-100 tracking-tight">{v.name}</h3>
+                            <h3 className="text-3xl font-extrabold text-slate-100 tracking-tight">{v.name} {v.gender === 'Pria' ? '♂️' : '♀️'}</h3>
                             <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
                               <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-500/20">LEVEL {v.level}</span>
-                              <span className="text-slate-500 text-[10px] font-mono">EXP {v.exp}/{v.maxExp}</span>
+                              <span className="text-slate-500 text-[10px] font-mono">{v.gender.toUpperCase()}</span>
+                              {v.state === 'PREGNANT' && <span className="bg-fuchsia-600/20 text-fuchsia-400 px-3 py-1 rounded-full text-[10px] font-bold border border-fuchsia-500/20 animate-pulse">SEDANG HAMIL ({Math.floor(v.gestationProgress * 100)}%)</span>}
                             </div>
                             <div className="mt-4 flex gap-2">
                               <div className="bg-amber-600/20 px-3 py-1.5 rounded-xl border border-amber-500/30">
@@ -183,9 +230,68 @@ export default function ManagementModal({ isOpen, onClose, villagers, onUpgradeS
           )}
 
           {activeTab === 'town' && (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-              <span className="text-4xl mb-4">🏗️</span>
-              <p className="text-sm italic">Fitur Balai Kota akan segera hadir...</p>
+            <div className="flex flex-col gap-8 p-4">
+              <div className="bg-slate-800/40 rounded-3xl p-8 border border-white/5 flex flex-col md:flex-row items-center gap-10">
+                <div className="w-40 h-40 bg-blue-600/10 rounded-3xl border border-blue-500/20 flex items-center justify-center text-6xl shadow-inner relative">
+                  🏠
+                  <div className="absolute -bottom-3 bg-blue-600 text-white text-[10px] font-black px-4 py-1 rounded-full shadow-xl uppercase tracking-widest">
+                    Level {townData.houseLevel}
+                  </div>
+                </div>
+                
+                <div className="flex-1 flex flex-col gap-6">
+                  <div>
+                    <h3 className="text-2xl font-black text-white tracking-tight">Kapasitas Perumahan</h3>
+                    <p className="text-slate-500 text-xs mt-1">Upgrade rumah untuk menampung lebih banyak penduduk dan menghindari status Homeless.</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Kapasitas Saat Ini</p>
+                      <p className="text-2xl font-black text-white">{townData.capacity} <span className="text-xs text-slate-600">Unit</span></p>
+                    </div>
+                    <div className="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
+                      <p className="text-[10px] font-bold text-blue-500 uppercase">Target Populasi</p>
+                      <p className="text-2xl font-black text-blue-400">{townData.villagerCount} <span className="text-xs text-blue-900">Unit</span></p>
+                    </div>
+                  </div>
+
+                  {nextLevel ? (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 h-px bg-slate-800"></div>
+                        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Biaya Upgrade Lvl {nextLevel}</span>
+                        <div className="flex-1 h-px bg-slate-800"></div>
+                      </div>
+                      
+                      <div className="flex gap-4">
+                         <div className={`flex-1 p-3 rounded-xl border flex flex-col items-center gap-1 ${resources.kayu >= upgradeCost!.wood ? 'bg-slate-900 border-white/5' : 'bg-rose-950/20 border-rose-500/20'}`}>
+                           <span className="text-[8px] font-bold text-slate-500 uppercase">Kayu</span>
+                           <span className={`text-sm font-black ${resources.kayu >= upgradeCost!.wood ? 'text-white' : 'text-rose-500'}`}>{resources.kayu} / {upgradeCost!.wood}</span>
+                         </div>
+                         <div className={`flex-1 p-3 rounded-xl border flex flex-col items-center gap-1 ${resources.batu >= upgradeCost!.stone ? 'bg-slate-900 border-white/5' : 'bg-rose-950/20 border-rose-500/20'}`}>
+                           <span className="text-[8px] font-bold text-slate-500 uppercase">Batu</span>
+                           <span className={`text-sm font-black ${resources.batu >= upgradeCost!.stone ? 'text-white' : 'text-rose-500'}`}>{resources.batu} / {upgradeCost!.stone}</span>
+                         </div>
+                      </div>
+
+                      <button 
+                        onClick={() => onUpgradeHouse()}
+                        disabled={!canAfford}
+                        className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3
+                          ${canAfford ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/40' : 'bg-slate-800 text-slate-600 grayscale cursor-not-allowed'}`}
+                      >
+                        🚀 {canAfford ? 'Mulai Upgrade Rumah' : 'Resource Tidak Cukup'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-500/10 p-6 rounded-2xl border border-emerald-500/20 text-center">
+                      <span className="text-2xl mb-2 block">✨</span>
+                      <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Kapasitas Maksimal Tercapai</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
