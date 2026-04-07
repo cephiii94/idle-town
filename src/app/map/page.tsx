@@ -88,7 +88,7 @@ export default function PlayPage() {
           </div>
 
           {/* Kolom 3: Info Aktivitas */}
-          <div className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800/50 shadow-inner flex flex-col overflow-hidden max-h-full">
+          <div className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800/50 shadow-inner flex flex-col overflow-hidden max-h-full mb-20 xl:mb-0">
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] flex-none">Aktivitas Penduduk</h2>
               <div className="text-[9px] font-bold text-blue-400/80 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">

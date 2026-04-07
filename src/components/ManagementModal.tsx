@@ -36,15 +36,15 @@ export default function ManagementModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
-      <div className="bg-slate-900 w-full max-w-4xl max-h-[80vh] rounded-3xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+      <div className="bg-slate-900 w-[95%] sm:w-full max-w-4xl max-h-[85vh] rounded-3xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden relative">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 text-white">
-          <div className="flex items-center gap-6">
-            <h2 className="text-xl font-bold uppercase tracking-tighter">Manajemen Desa</h2>
-            <div className="flex gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+        <div className="p-4 md:p-6 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between bg-slate-900/50 text-white gap-4">
+          <div className="flex flex-col xs:flex-row items-start xs:items-center gap-3 md:gap-6">
+            <h2 className="text-lg md:text-xl font-bold uppercase tracking-tighter whitespace-nowrap">Manajemen Desa</h2>
+            <div className="flex gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 h-fit">
               <button 
                 onClick={() => { setActiveTab('karakter'); setSelectedVillagerId(null); }}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${
                   activeTab === 'karakter' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -52,7 +52,7 @@ export default function ManagementModal({
               </button>
               <button 
                 onClick={() => setActiveTab('town')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${
                   activeTab === 'town' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -62,14 +62,14 @@ export default function ManagementModal({
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white"
+            className="absolute top-4 right-4 sm:static p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white z-10 bg-slate-900/80 sm:bg-transparent"
           >
             ✕
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
           {activeTab === 'karakter' && (
             <div className="flex flex-col gap-6">
               {villagers.length === 0 ? (
@@ -231,18 +231,18 @@ export default function ManagementModal({
 
           {activeTab === 'town' && (
             <div className="flex flex-col gap-8 p-4">
-              <div className="bg-slate-800/40 rounded-3xl p-8 border border-white/5 flex flex-col md:flex-row items-center gap-10">
-                <div className="w-40 h-40 bg-blue-600/10 rounded-3xl border border-blue-500/20 flex items-center justify-center text-6xl shadow-inner relative">
+              <div className="bg-slate-800/40 rounded-3xl p-6 md:p-8 border border-white/5 flex flex-col md:flex-row items-center gap-6 md:gap-10">
+                <div className="w-32 h-32 md:w-40 md:h-40 bg-blue-600/10 rounded-3xl border border-blue-500/20 flex items-center justify-center text-5xl md:text-6xl shadow-inner relative flex-none">
                   🏠
-                  <div className="absolute -bottom-3 bg-blue-600 text-white text-[10px] font-black px-4 py-1 rounded-full shadow-xl uppercase tracking-widest">
+                  <div className="absolute -bottom-3 bg-blue-600 text-white text-[9px] md:text-[10px] font-black px-3 md:px-4 py-1 rounded-full shadow-xl uppercase tracking-widest">
                     Level {townData.houseLevel}
                   </div>
                 </div>
                 
-                <div className="flex-1 flex flex-col gap-6">
-                  <div>
-                    <h3 className="text-2xl font-black text-white tracking-tight">Kapasitas Perumahan</h3>
-                    <p className="text-slate-500 text-xs mt-1">Upgrade rumah untuk menampung lebih banyak penduduk dan menghindari status Homeless.</p>
+                <div className="flex-1 flex flex-col gap-6 w-full">
+                  <div className="text-center md:text-left">
+                    <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">Kapasitas Perumahan</h3>
+                    <p className="text-slate-500 text-[10px] md:text-xs mt-1">Upgrade rumah untuk menampung lebih banyak penduduk dan menghindari status Homeless.</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
