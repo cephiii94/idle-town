@@ -27,7 +27,7 @@ export default function MainMenuPage() {
 
         <div className="flex flex-col gap-4 w-full max-w-xs animate-in slide-in-from-bottom-8 duration-700 delay-300">
           <Link 
-            href="/map"
+            href="/stage"
             className="group relative bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-sm text-center uppercase tracking-[0.2em] transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.6)] active:scale-95 overflow-hidden"
           >
             <span className="relative z-10">Mulai Petualangan</span>
